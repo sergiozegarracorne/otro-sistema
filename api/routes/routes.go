@@ -19,6 +19,8 @@ func SetupRouter() *gin.Engine {
 	r.POST("/logout", controllers.Logout)
 
 	r.POST("/auth/login", controllers.Login)
+	// Nueva ruta para obtener el token CSRF
+	r.GET("auth/token", controllers.CSRFTokenHandler)
 
 	return r
 }

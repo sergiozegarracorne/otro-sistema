@@ -1,72 +1,101 @@
 // app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  // --- Estados para los campos del formulario ---
+  const [ruc, setRuc] = useState("");
+  const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
 
-  // app/login/page.tsx
+  // --- Estados para el token CSRF y la carga ---
+  const [csrfToken, setCsrfToken] = useState("");
+  const [isLoadingToken, setIsLoadingToken] = useState(true);
 
-  // ... (el resto del código de la página se queda igual)
+  // 1. useEffect para obtener el token CSRF al cargar la página
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        // Pedimos el token a nuestro backend
+        const response = await fetch("http://localhost:9000/api/auth/token", {
+          method: "GET",
+          credentials: "include", // ¡Importante! para que el navegador pueda recibir la cookie
+        });
+        if (!response.ok) {
+          throw new Error("No se pudo obtener el token de seguridad");
+        }
+        const data = await response.json();
+        setCsrfToken(data.token); // Guardamos el token en el estado
+      } catch (error) {
+        console.error("Error al obtener el token CSRF:", error);
+        alert("No se pudo cargar el formulario de forma segura. Recarga la página.");
+      } finally {
+        setIsLoadingToken(false); // Dejamos de mostrar el mensaje de carga
+      }
+    };
+
+    fetchToken();
+  }, []); // El array vacío asegura que esto se ejecute solo una vez
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    // 1. Muestra un mensaje de "cargando" o deshabilita el botón (opcional pero bueno)
-    console.log("Enviando datos al backend...");
+    if (!csrfToken) {
+      alert("El token de seguridad no está listo. Espera un momento.");
+      return;
+    }
 
     try {
-      // 2. Define la URL de tu API de Go. ¡Asegúrate de que el puerto sea el correcto!
-      const apiUrl = "http://localhost:9000/auth/login"; // Cambia 8080 si tu Go usa otro puerto
-
-      // 3. Envía los datos usando fetch
+      // 2. URL correcta y envío de credenciales
+      const apiUrl = "http://localhost:9000/api/auth/login";
       const response = await fetch(apiUrl, {
-        method: "POST", // Estamos enviando datos, así que usamos POST
+        method: "POST",
         headers: {
-          "Content-Type": "application/json", // Le decimos al backend que le enviamos JSON
+          "Content-Type": "application/json",
         },
+        credentials: "include", // ¡Importante! para que el navegador envíe la cookie del token CSRF
         body: JSON.stringify({
-          // Convertimos el objeto de JS a una cadena de texto JSON
-          email: email,
+          ruc: ruc,
+          usuario: usuario,
           password: password,
+          csrf_token: csrfToken, // 3. Enviamos el token en el cuerpo de la petición
         }),
       });
 
-      // 4. Revisa la respuesta del backend
       if (response.ok) {
-        // Si la respuesta es exitosa (status 200-299)
         const data = await response.json();
         console.log("Login exitoso:", data);
-
-        // 5. ¡Guarda el token! El backend te debería devolver un token.
-        // Lo guardamos en una cookie para que el middleware lo pueda leer después.
-        document.cookie = `auth_token=${data.token}; path=/;`; // Guarda el token en una cookie
-
-        // 6. Redirige al usuario al panel de admin
+        
+        // 4. Guardamos el token de sesión (no el CSRF) en una cookie
+        document.cookie = `auth_token=${data.token}; path=/;`;
+        
+        // Redirigimos al usuario al panel de admin
         window.location.href = "/admin";
       } else {
-        // Si la respuesta es un error (ej. 401 Unauthorized)
         const errorData = await response.json();
-        console.error("Error de login:", errorData.message);
-        alert(`Error: ${errorData.message || "Credenciales incorrectas"}`);
+        console.error("Error de login:", errorData.error || errorData.message);
+        alert(`Error: ${errorData.error || errorData.message || "Credenciales incorrectas"}`);
       }
     } catch (error) {
-      // Si hay un error de red o el servidor no responde
       console.error("Error de conexión:", error);
       alert("No se pudo conectar al servidor. Intenta más tarde.");
     }
   };
 
-  // ... (el resto del código de la página se queda igual)
+  // Mientras se carga el token, mostramos un mensaje
+  if (isLoadingToken) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="text-center">
+          <p className="text-lg text-gray-600">Cargando formulario seguro...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    // Fondo de pantalla completo y centrado
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      {/* Contenedor blanco de la tarjeta de login */}
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
-        {/* Título */}
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold text-gray-800">Iniciar Sesión</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -74,33 +103,45 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Campo de Email */}
+          {/* 5. Campo oculto para el token CSRF */}
+          <input type="hidden" name="csrf_token" value={csrfToken} />
+
+          {/* Nuevo campo para el RUC */}
           <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Correo Electrónico
+            <label htmlFor="ruc" className="mb-1 block text-sm font-medium text-gray-700">
+              RUC
             </label>
             <input
-              id="email"
-              type="email"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="ruc"
+              type="text"
+              placeholder="Tu RUC"
+              value={ruc}
+              onChange={(e) => setRuc(e.target.value)}
               required
               className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Campo de Contraseña */}
+          {/* Nuevo campo para el Usuario */}
           <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="usuario" className="mb-1 block text-sm font-medium text-gray-700">
+              Usuario
+            </label>
+            <input
+              id="usuario"
+              type="text"
+              placeholder="Tu nombre de usuario"
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              required
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Campo de Contraseña (se mantiene igual) */}
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               Contraseña
             </label>
             <input
@@ -114,7 +155,7 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Opciones extra (Recordarme y Olvidé mi contraseña) */}
+          {/* Opciones extra (se mantienen) */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <input
@@ -122,18 +163,12 @@ export default function LoginPage() {
                 type="checkbox"
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <label
-                htmlFor="remember"
-                className="ml-2 block text-sm text-gray-700"
-              >
+              <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
                 Recordarme
               </label>
             </div>
             <div className="text-sm">
-              <a
-                href="#"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
+              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
