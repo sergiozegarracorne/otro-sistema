@@ -46,3 +46,20 @@ func GetUserByCredentials(ruc string, usuario string) (User, string, error) {
 	// Si todo va bien, devuelve el usuario, su hash y un error 'nil'.
 	return u, passwordHash, err
 }
+
+// GetUserByID obtiene un usuario por su ID
+func GetUserByID(id int) (User, error) {
+	var u User
+
+	query := "SELECT idx, ruc, usu, cor, niv FROM tbl_user_2025 WHERE idx = ?"
+
+	err := config.DB.QueryRow(query, id).Scan(
+		&u.ID,
+		&u.RUC,
+		&u.Usuario,
+		&u.Correo,
+		&u.Nivel,
+	)
+
+	return u, err
+}

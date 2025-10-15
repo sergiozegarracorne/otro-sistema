@@ -7,6 +7,10 @@ import (
 
 func main() {
 	config.ConnectDB()
+
+	// Ejecutar migraciones
+	//utils.RunMigrations()
+
 	r := routes.SetupRouter()
 	r.Run(":9000")
 }

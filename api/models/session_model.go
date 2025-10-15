@@ -14,7 +14,7 @@ type Session struct {
 // Crear nueva sesión
 func CreateSession(userID int, token string, expires time.Time) error {
 	_, err := config.DB.Exec(
-		"INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)",
+		"INSERT INTO 2025_sessions (user_id, token, expires_at) VALUES (?, ?, ?)",
 		userID, token, expires,
 	)
 	return err
@@ -25,7 +25,7 @@ func ValidateSession(token string) (int, bool) {
 	var userID int
 	var expires time.Time
 	err := config.DB.QueryRow(
-		"SELECT user_id, expires_at FROM sessions WHERE token = ?", token,
+		"SELECT user_id, expires_at FROM 2025_sessions WHERE token = ?", token,
 	).Scan(&userID, &expires)
 
 	if err != nil {
@@ -39,6 +39,6 @@ func ValidateSession(token string) (int, bool) {
 
 // Eliminar sesión (logout)
 func DeleteSession(token string) error {
-	_, err := config.DB.Exec("DELETE FROM sessions WHERE token = ?", token)
+	_, err := config.DB.Exec("DELETE FROM 2025_sessions WHERE token = ?", token)
 	return err
 }

@@ -2,8 +2,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const { login, isAuthenticated } = useAuth();
+  const router = useRouter();
+  
   // --- Estados para los campos del formulario ---
   const [ruc, setRuc] = useState("");
   const [usuario, setUsuario] = useState("");
@@ -12,6 +17,13 @@ export default function LoginPage() {
   // --- Estados para el token CSRF y la carga ---
   const [csrfToken, setCsrfToken] = useState("");
   const [isLoadingToken, setIsLoadingToken] = useState(true);
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/admin');
+    }
+  }, [isAuthenticated, router]);
 
   // 1. useEffect para obtener el token CSRF al cargar la página
   useEffect(() => {
@@ -67,9 +79,11 @@ export default function LoginPage() {
         const data = await response.json();
         console.log("Login exitoso:", data);
 
+        // Guardar el token y actualizar el estado de autenticación
+        login(data.token);
         
-        // Redirigimos al usuario al panel de admin
-        window.location.href = "/admin";
+        // Redirigir al usuario al panel de admin
+        router.push("/admin");
       } else {
         const errorData = await response.json();
         console.error("Error de login:", errorData.error || errorData.message);

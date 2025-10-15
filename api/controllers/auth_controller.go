@@ -70,11 +70,11 @@ func LoginHandler(c *gin.Context) {
 
 	// 2. Buscamos al usuario
 	user, passwordHash, err := models.GetUserByCredentials(req.RUC, req.Usuario)
-	fmt.Println(passwordHash, user)
+	//fmt.Println(passwordHash, user, err)
 	if err != nil {
 		// Gin nos da un helper para saber si es un error de "no se encontraron filas"
 		// si no, asumimos que es un error genérico.
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Credenciales incorrectas"})
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Credenciales incorrectas pass"})
 		return
 	}
 
@@ -85,13 +85,19 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// 4. Respuesta de éxito
-	fakeToken := "token-secreto-de-acceso-12345"
+	// 4. Crear sesión real en la base de datos
+	token := uuid.New().String()
+	expires := time.Now().Add(2 * time.Hour) // duración 2h
+	err = models.CreateSession(user.ID, token, expires)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo crear la sesión"})
+		return
+	}
 
-	c.SetCookie("auth_token", fakeToken, 3600, "/", "", false, true) // (name, value, maxage, path, domain, secure, httponly)
+	c.SetCookie("auth_token", token, 3600, "/", "", false, true) // (name, value, maxage, path, domain, secure, httponly)
 
 	response := models.LoginResponse{
-		Token:   fakeToken,
+		Token:   token,
 		Message: "Login exitoso",
 	}
 	c.JSON(http.StatusOK, response)
@@ -160,19 +166,25 @@ func HolaMundo(c *gin.Context) {
 
 // GET /me  → verificar sesión y devolver info
 func Me(c *gin.Context) {
-	token := c.GetHeader("Authorization")
-	if token == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token requerido"})
+	// El middleware ya validó la autenticación, solo obtenemos los datos
+	//fmt.Println("Me", c.GetInt("userID"), "otro", c.GetInt("user_id"))
+
+	userID := c.GetInt("user_id")
+	//token := c.GetString("token")
+
+	// Obtener información completa del usuario
+	user, err := models.GetUserByID(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener información del usuario " + err.Error()})
 		return
 	}
 
-	userID, valid := models.ValidateSession(token)
-	if !valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sesión no válida o expirada"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Sesión válida", "user_id": userID})
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Sesión válida",
+		"user":          user,
+		"user_id":       userID,
+		"authenticated": true,
+	})
 }
 
 // POST /logout

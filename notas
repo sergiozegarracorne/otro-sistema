@@ -2,4 +2,6 @@ npm run dev
 
 go run main.go
 
+go mod download
+
  python -m http.server 8000 
