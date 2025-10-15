@@ -8,6 +8,9 @@ export function middleware(request: NextRequest) {
   //    Nosotros la llamaremos 'auth_token'
   const token = request.cookies.get('auth_token')?.value;
 
+  console.log("Middleware revisando token:", token);
+  
+
   // 2. Si el usuario está tratando de entrar a /admin...
   if (request.nextUrl.pathname.startsWith('/admin')) {
     // ...y NO tiene el token...
@@ -23,5 +26,5 @@ export function middleware(request: NextRequest) {
 
 // Esta configuración le dice a Next.js en qué rutas debe ejecutar este middleware
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*'], 
 };

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-login/models"
 	"go-login/utils" // <-- Importamos nuestro paquete de utilidades
+	"log"
 	"net/http"
 	"time"
 
@@ -19,6 +20,9 @@ func CSRFTokenHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al generar el token"})
 		return
 	}
+
+	log.Printf("✅ [CSRF] Token generado: %s", token)
+
 	// Gin también nos facilita poner las cookies
 	c.SetCookie("csrf_token", token, 3600, "/", "", false, true) // (name, value, maxage, path, domain, secure, httponly)
 	// Y devolver el JSON es mucho más sencillo
@@ -49,14 +53,24 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
+	// --- LOGS DE DEPURACIÓN ---
+	log.Printf("🔍 [CSRF] Token recibido desde la cookie: %s", cookieToken)
+	log.Printf("🔍 [CSRF] Token recibido desde el body JSON: %s", req.CSRFToken)
+	// --- FIN DE LOS LOGS ---
+
 	if req.CSRFToken != cookieToken {
+		log.Printf("❌ [CSRF] ERROR: Los tokens no coinciden. PETICIÓN RECHAZADA.")
 		c.JSON(http.StatusForbidden, gin.H{"error": "Token CSRF inválido"})
 		return
 	}
 
+	// --- LOG DE DEPURACIÓN ---
+	log.Printf("✅ [CSRF] Los tokens coinciden. Procesando login...")
+	// --- FIN DEL LOG --
+
 	// 2. Buscamos al usuario
 	user, passwordHash, err := models.GetUserByCredentials(req.RUC, req.Usuario)
-	fmt.Println(user)
+	fmt.Println(passwordHash, user)
 	if err != nil {
 		// Gin nos da un helper para saber si es un error de "no se encontraron filas"
 		// si no, asumimos que es un error genérico.
@@ -67,12 +81,15 @@ func LoginHandler(c *gin.Context) {
 	// 3. Comparamos la contraseña
 	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Credenciales incorrectas"})
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Credenciales incorrectas PASS"})
 		return
 	}
 
 	// 4. Respuesta de éxito
 	fakeToken := "token-secreto-de-acceso-12345"
+
+	c.SetCookie("auth_token", fakeToken, 3600, "/", "", false, true) // (name, value, maxage, path, domain, secure, httponly)
+
 	response := models.LoginResponse{
 		Token:   fakeToken,
 		Message: "Login exitoso",

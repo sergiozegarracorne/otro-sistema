@@ -31,7 +31,7 @@ func GetUserByCredentials(ruc string, usuario string) (User, string, error) {
 	// 1. La consulta SQL solo busca por RUC y Usuario. NUNCA por contraseña.
 	// 2. Las columnas que seleccionamos (id, ruc, usu, cor, niv, password)
 	//    coinciden EXACTAMENTE con el orden y tipo de las variables en el Scan.
-	query := "SELECT id, ruc, usu, cor, niv, paz FROM tbl_user WHERE ruc = ? AND usu = ?"
+	query := "SELECT idx, ruc, usu, cor, niv, paz FROM tbl_user_2025 WHERE ruc = ? AND usu = ?"
 
 	err := config.DB.QueryRow(query, ruc, usuario).Scan(
 		&u.ID,         // Mapea columna 'id' a u.ID

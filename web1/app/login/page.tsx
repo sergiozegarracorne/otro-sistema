@@ -18,10 +18,11 @@ export default function LoginPage() {
     const fetchToken = async () => {
       try {
         // Pedimos el token a nuestro backend
-        const response = await fetch("http://localhost:9000/api/auth/token", {
-          method: "GET",
+        const response = await fetch("http://localhost:9000/auth/token", { 
+          method: "GET",          
           credentials: "include", // ¡Importante! para que el navegador pueda recibir la cookie
         });
+        console.log(response);
         if (!response.ok) {
           throw new Error("No se pudo obtener el token de seguridad");
         }
@@ -47,7 +48,7 @@ export default function LoginPage() {
 
     try {
       // 2. URL correcta y envío de credenciales
-      const apiUrl = "http://localhost:9000/api/auth/login";
+      const apiUrl = "http://localhost:9000/auth/login";
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -65,9 +66,7 @@ export default function LoginPage() {
       if (response.ok) {
         const data = await response.json();
         console.log("Login exitoso:", data);
-        
-        // 4. Guardamos el token de sesión (no el CSRF) en una cookie
-        document.cookie = `auth_token=${data.token}; path=/;`;
+
         
         // Redirigimos al usuario al panel de admin
         window.location.href = "/admin";
