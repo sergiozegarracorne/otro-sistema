@@ -203,3 +203,61 @@ func Logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Sesión cerrada"})
 }
+
+// ChangePasswordRequest estructura para cambio de contraseña
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+}
+
+// POST /change-password
+func ChangePassword(c *gin.Context) {
+	userID := c.GetInt("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuario no autenticado"})
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos"})
+		return
+	}
+
+	// Validar longitud mínima de contraseña
+	if len(req.NewPassword) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "La nueva contraseña debe tener al menos 6 caracteres"})
+		return
+	}
+
+	// Obtener el usuario y su contraseña actual
+	user, currentPasswordHash, err := models.GetUserByIDWithPassword(userID)
+	fmt.Println("user", user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener información del usuario"})
+		return
+	}
+
+	// Verificar la contraseña actual
+	err = bcrypt.CompareHashAndPassword([]byte(currentPasswordHash), []byte(req.CurrentPassword))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "La contraseña actual es incorrecta"})
+		return
+	}
+
+	// Generar hash para la nueva contraseña
+	newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al procesar la nueva contraseña"})
+		return
+	}
+
+	// Actualizar la contraseña en la base de datos
+	err = models.UpdateUserPassword(userID, string(newPasswordHash))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al actualizar la contraseña"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contraseña actualizada exitosamente"})
+}

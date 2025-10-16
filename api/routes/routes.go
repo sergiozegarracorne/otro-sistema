@@ -47,8 +47,9 @@ func SetupRouter() *gin.Engine {
 	protected := r.Group("/api")
 	protected.Use(middleware.AuthMiddleware()) // Aplicar middleware a todas las rutas /api/*
 	{
-		protected.GET("/me", controllers.Me)          // GET /api/me - Información del usuario
-		protected.POST("/logout", controllers.Logout) // POST /api/logout - Cerrar sesión
+		protected.GET("/me", controllers.Me)                    // GET /api/me - Información del usuario
+		protected.POST("/logout", controllers.Logout)          // POST /api/logout - Cerrar sesión
+		protected.POST("/change-password", controllers.ChangePassword) // POST /api/change-password - Cambiar contraseña
 		// Aquí puedes agregar más rutas protegidas
 		// protected.GET("/dashboard", controllers.Dashboard)
 		// protected.GET("/profile", controllers.Profile)

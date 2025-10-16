@@ -63,3 +63,30 @@ func GetUserByID(id int) (User, error) {
 
 	return u, err
 }
+
+// GetUserByIDWithPassword obtiene un usuario por su ID incluyendo la contraseña
+func GetUserByIDWithPassword(id int) (User, string, error) {
+	var u User
+	var passwordHash string
+
+	query := "SELECT idx, ruc, usu, cor, niv, paz FROM tbl_user_2025 WHERE idx = ?"
+
+	err := config.DB.QueryRow(query, id).Scan(
+		&u.ID,
+		&u.RUC,
+		&u.Usuario,
+		&u.Correo,
+		&u.Nivel,
+		&passwordHash,
+	)
+
+	return u, passwordHash, err
+}
+
+// UpdateUserPassword actualiza la contraseña de un usuario
+func UpdateUserPassword(id int, newPasswordHash string) error {
+	query := "UPDATE tbl_user_2025 SET paz = ? WHERE idx = ?"
+	
+	_, err := config.DB.Exec(query, newPasswordHash, id)
+	return err
+}
