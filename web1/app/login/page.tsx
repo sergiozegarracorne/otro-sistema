@@ -55,6 +55,7 @@ export default function LoginPage() {
     event.preventDefault();
     if (!csrfToken) {
       alert("El token de seguridad no está listo. Espera un momento.");
+      router.refresh();
       return;
     }
 

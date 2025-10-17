@@ -41,15 +41,11 @@ export default function ProtectedRoute({ children, requiredLevel = 0 }: Protecte
     );
   }
 
-  // Si no está autenticado, no mostrar nada (ya se redirigió)
-  if (!isAuthenticated) {
-    return null;
+  // Si está autenticado y (no se requiere nivel o el nivel es suficiente)
+  if (isAuthenticated && (!requiredLevel || (user && user.nivel >= requiredLevel))) {
+    return <>{children}</>;
   }
 
-  // Si no tiene el nivel requerido, no mostrar nada (ya se redirigió)
-  if (requiredLevel > 0 && user && user.nivel < requiredLevel) {
-    return null;
-  }
-
-  return <>{children}</>;
+  // En cualquier otro caso (como durante la redirección), no renderizar nada.
+  return null;
 }

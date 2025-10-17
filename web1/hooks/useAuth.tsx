@@ -41,7 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('auth_token');
       if (!token) {
         setUser(null);
-        setIsLoading(false);
         return false;
       }
 
@@ -54,25 +53,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: 'include',
       });
 
-      console.log(response);
       if (response.ok) {
         const data = await response.json();
-        console.log(data);
         setUser(data.user);
-        setIsLoading(false);
         return true;
       } else {
         // Token inválido, limpiar
         localStorage.removeItem('auth_token');
         setUser(null);
-        setIsLoading(false);
         return false;
       }
     } catch (error) {
       console.error('Error verificando autenticación:', error);
       setUser(null);
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
